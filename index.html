@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="S&C Coach">
+<meta name="theme-color" content="#ffffff">
+<title>S&C Coach — Load Calculator</title>
+<style>
+:root{
+  --bg:#F3F4F6;--surface:#fff;--border:#E5E7EB;
+  --text:#111827;--sub:#6B7280;--dim:#9CA3AF;
+  --accent:#F59E0B;--radius:12px;--radius-sm:8px;
+  --max:#A32D2D;--str:#993C1D;--sh:#854F0B;--hyp:#3B6D11;--end:#185FA5;
+  --nav-h:68px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overscroll-behavior:none;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:var(--nav-h);}
+h2{font-size:20px;font-weight:600;margin-bottom:4px;}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:16px;font-family:inherit;appearance:none;-webkit-appearance:none;}
+input:focus,select:focus{outline:none;border-color:#9CA3AF;}
+button{cursor:pointer;font-family:inherit;font-size:14px;border:none;border-radius:var(--radius-sm);padding:10px 16px;background:var(--text);color:#fff;font-weight:500;}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--sub);}
+button.danger{background:transparent;color:#DC2626;}
+button.accent{background:var(--accent);color:#fff;}
+.page{display:none;padding:16px;animation:fi .18s ease;}
+.page.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text);}
+.metric{background:var(--bg);border-radius:var(--radius-sm);padding:12px;text-align:center;}
+.mval{font-size:22px;font-weight:600;}.mlbl{font-size:11px;color:var(--sub);margin-top:2px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.row{display:flex;align-items:center;gap:8px;}
+.fl{display:flex;}.fljb{display:flex;justify-content:space-between;align-items:center;}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;}
+.fl-label{font-size:12px;color:var(--sub);margin-bottom:4px;display:block;font-weight:500;}
+.cat-hd{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--border);padding-bottom:5px;margin:14px 0 8px;font-weight:600;}
+.cat-hd:first-child{margin-top:0;}
+/* Zone bar */
+.z-bar{display:flex;height:24px;border-radius:8px;overflow:hidden;gap:2px;}
+.z-seg{flex:1;cursor:pointer;transition:opacity .18s;}
+/* Bottom nav */
+#bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--border);display:flex;padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:100;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--dim);font-weight:500;}
+.nb svg{width:22px;height:22px;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+.nb.active{color:var(--accent);}
+/* Header */
+.app-hdr{padding:16px 16px 0;padding-top:calc(16px + env(safe-area-inset-top));}
+.app-hdr p{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px;font-weight:600;}
+/* Toggle buttons */
+.toggle-row{display:flex;gap:4px;background:var(--bg);border-radius:var(--radius-sm);padding:4px;margin-bottom:14px;}
+.toggle-btn{flex:1;padding:8px;border-radius:6px;border:none;font-size:13px;font-weight:500;background:transparent;color:var(--sub);cursor:pointer;}
+.toggle-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+/* Strength bar */
+.std-bar{display:flex;gap:2px;height:8px;border-radius:4px;overflow:hidden;margin:8px 0 4px;}
+.std-seg{flex:1;}
+/* Session exercise card */
+.sess-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid;border-radius:var(--radius);padding:12px;margin-bottom:8px;}
+/* Zone reference card */
+.zone-ref{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+/* Plan table row */
+.plan-row{display:grid;grid-template-columns:42px 1fr 70px 42px 60px 50px;gap:4px;align-items:center;padding:8px;border-radius:8px;margin-bottom:3px;font-size:12px;}
+.plan-hdr{display:grid;grid-template-columns:42px 1fr 70px 42px 60px 50px;gap:4px;padding:6px 8px;font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.07em;}
+/* Scrollable client list */
+.client-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+.client-scroll::-webkit-scrollbar{display:none;}
+.cli-btn{white-space:nowrap;flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--sub);font-size:13px;font-weight:500;cursor:pointer;}
+.cli-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
+/* Install tip */
+.install-tip{background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--radius);padding:14px;margin-bottom:12px;font-size:13px;color:#78350F;}
+.install-tip strong{display:block;margin-bottom:4px;font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- App header -->
+<div class="app-hdr">
+  <p>S&amp;C Coach Toolkit</p>
+  <div class="fljb">
+    <h2 id="page-title">Load &amp; Intensity</h2>
+    <span id="active-client-badge" style="font-size:13px;color:var(--sub);font-weight:500;"></span>
+  </div>
+</div>
+
+<!-- Pages -->
+<div id="page-clients" class="page active"></div>
+<div id="page-calc" class="page"></div>
+<div id="page-session" class="page"></div>
+<div id="page-program" class="page"></div>
+<div id="page-guide" class="page"></div>
+
+<!-- Bottom nav -->
+<nav id="bottom-nav">
+  <button class="nb active" onclick="nav('clients')" id="nb-clients">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Clients
+  </button>
+  <button class="nb" onclick="nav('calc')" id="nb-calc">
+    <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Calc
+  </button>
+  <button class="nb" onclick="nav('session')" id="nb-session">
+    <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+    <span id="nb-session-label">Session</span>
+  </button>
+  <button class="nb" onclick="nav('program')" id="nb-program">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Program
+  </button>
+  <button class="nb" onclick="nav('guide')" id="nb-guide">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="22 20 2 20"/></svg>
+    Guide
+  </button>
+</nav>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const ZONES=[
+  {id:"maxStrength",name:"Maximal strength",pL:90,pH:100,rL:1,rH:3,sets:"3–5",rpe:"9–10",col:"#A32D2D",bg:"#FEF2F2"},
+  {id:"strength",name:"Strength",pL:80,pH:89,rL:3,rH:5,sets:"3–5",rpe:"8–9",col:"#993C1D",bg:"#FFF7ED"},
+  {id:"strHyp",name:"Strength-hypertrophy",pL:75,pH:82,rL:5,rH:8,sets:"3–5",rpe:"7–9",col:"#854F0B",bg:"#FFFBEB"},
+  {id:"hypertrophy",name:"Hypertrophy",pL:65,pH:80,rL:8,rH:12,sets:"3–4",rpe:"7–8",col:"#3B6D11",bg:"#F0FDF4"},
+  {id:"endurance",name:"Muscular endurance",pL:40,pH:65,rL:12,rH:25,sets:"2–4",rpe:"5–7",col:"#185FA5",bg:"#EFF6FF"},
+];
+const EX=[
+  {id:"squat",name:"Back squat",cat:"Squat"},
+  {id:"frontSquat",name:"Front squat",cat:"Squat"},
+  {id:"boxSquat",name:"Box squat",cat:"Squat"},
+  {id:"hackSquat",name:"Hack squat",cat:"Squat"},
+  {id:"goblet",name:"Goblet squat",cat:"Squat"},
+  {id:"bsss",name:"Bulgarian split squat",cat:"Squat"},
+  {id:"legPress",name:"Leg press",cat:"Squat"},
+  {id:"zercher",name:"Zercher squat",cat:"Squat"},
+  {id:"deadlift",name:"Deadlift",cat:"Hip hinge"},
+  {id:"rdl",name:"Romanian deadlift",cat:"Hip hinge"},
+  {id:"sumo",name:"Sumo deadlift",cat:"Hip hinge"},
+  {id:"trapBar",name:"Trap bar deadlift",cat:"Hip hinge"},
+  {id:"goodMorn",name:"Good morning",cat:"Hip hinge"},
+  {id:"sldl",name:"Stiff-leg deadlift",cat:"Hip hinge"},
+  {id:"snatchDL",name:"Snatch-grip deadlift",cat:"Hip hinge"},
+  {id:"hipThrust",name:"Hip thrust",cat:"Lower accessory"},
+  {id:"gluteBridge",name:"Glute bridge",cat:"Lower accessory"},
+  {id:"nordic",name:"Nordic curl",cat:"Lower accessory"},
+  {id:"legCurl",name:"Leg curl",cat:"Lower accessory"},
+  {id:"legExt",name:"Leg extension",cat:"Lower accessory"},
+  {id:"calfRaise",name:"Calf raise",cat:"Lower accessory"},
+  {id:"stepUp",name:"Step-up",cat:"Lower accessory"},
+  {id:"lunge",name:"Walking lunge",cat:"Lower accessory"},
+  {id:"bench",name:"Bench press",cat:"Horizontal push"},
+  {id:"incline",name:"Incline bench press",cat:"Horizontal push"},
+  {id:"decline",name:"Decline bench press",cat:"Horizontal push"},
+  {id:"cgBench",name:"Close-grip bench press",cat:"Horizontal push"},
+  {id:"floorPress",name:"Floor press",cat:"Horizontal push"},
+  {id:"dbBench",name:"Dumbbell bench press",cat:"Horizontal push"},
+  {id:"ohp",name:"Overhead press",cat:"Vertical push"},
+  {id:"pushPress",name:"Push press",cat:"Vertical push"},
+  {id:"seatedOhp",name:"Seated overhead press",cat:"Vertical push"},
+  {id:"dbPress",name:"DB shoulder press",cat:"Vertical push"},
+  {id:"landmine",name:"Landmine press",cat:"Vertical push"},
+  {id:"row",name:"Barbell row",cat:"Horizontal pull"},
+  {id:"pendlay",name:"Pendlay row",cat:"Horizontal pull"},
+  {id:"tbar",name:"T-bar row",cat:"Horizontal pull"},
+  {id:"dbRow",name:"Dumbbell row",cat:"Horizontal pull"},
+  {id:"csRow",name:"Chest-supported row",cat:"Horizontal pull"},
+  {id:"cableRow",name:"Seated cable row",cat:"Horizontal pull"},
+  {id:"invRow",name:"Inverted row",cat:"Horizontal pull"},
+  {id:"pullUp",name:"Weighted pull-up",cat:"Vertical pull"},
+  {id:"chinUp",name:"Weighted chin-up",cat:"Vertical pull"},
+  {id:"latPull",name:"Lat pulldown",cat:"Vertical pull"},
+  {id:"cgPull",name:"Close-grip pulldown",cat:"Vertical pull"},
+  {id:"curl",name:"Barbell curl",cat:"Arms & accessory"},
+  {id:"hammer",name:"Hammer curl",cat:"Arms & accessory"},
+  {id:"skull",name:"Skullcrusher",cat:"Arms & accessory"},
+  {id:"dip",name:"Weighted dip",cat:"Arms & accessory"},
+  {id:"facePull",name:"Face pull",cat:"Arms & accessory"},
+  {id:"lateral",name:"Lateral raise",cat:"Arms & accessory"},
+  {id:"pClean",name:"Power clean",cat:"Olympic"},
+  {id:"pSnatch",name:"Power snatch",cat:"Olympic"},
+  {id:"cleanJerk",name:"Clean and jerk",cat:"Olympic"},
+  {id:"snatch",name:"Snatch",cat:"Olympic"},
+  {id:"hangClean",name:"Hang clean",cat:"Olympic"},
+  {id:"hangSnatch",name:"Hang snatch",cat:"Olympic"},
+  {id:"cleanPull",name:"Clean pull",cat:"Olympic"},
+  {id:"snatPull",name:"Snatch pull",cat:"Olympic"},
+  {id:"farmers",name:"Farmers carry",cat:"Carries"},
+  {id:"suitcase",name:"Suitcase carry",cat:"Carries"},
+  {id:"sledPush",name:"Sled push",cat:"Carries"},
+  {id:"sledPull",name:"Sled pull",cat:"Carries"},
+  {id:"yoke",name:"Yoke carry",cat:"Carries"},
+];
+const CATS=[...new Set(EX.map(e=>e.cat))];
+const STDS={
+  squat:{name:"Back squat",exId:"squat",male:[0.5,0.75,1.0,1.5,2.0,2.5],female:[0.3,0.5,0.65,1.0,1.3,1.65]},
+  bench:{name:"Bench press",exId:"bench",male:[0.3,0.5,0.75,1.0,1.5,2.0],female:[0.15,0.25,0.45,0.65,1.0,1.3]},
+  deadlift:{name:"Deadlift",exId:"deadlift",male:[0.6,0.9,1.25,1.75,2.25,2.75],female:[0.35,0.6,0.9,1.25,1.65,2.0]},
+  ohp:{name:"Overhead press",exId:"ohp",male:[0.2,0.35,0.5,0.65,0.9,1.2],female:[0.1,0.2,0.3,0.45,0.6,0.75]},
+};
+const STD_LBL=["Untrained","Beginner","Novice","Intermediate","Advanced","Elite"];
+const STD_COL=["#9CA3AF","#185FA5","#3B6D11","#854F0B","#993C1D","#A32D2D"];
+const PLAN_DESC={
+  linear:"Classic linear periodization — volume decreases, intensity increases week by week. Best for beginners and intermediate lifters building toward a peak.",
+  block:"Block periodization — concentrated training phases: Accumulation → Transmutation → Realization → Deload. Ideal for intermediate-to-advanced athletes.",
+  dup:"Daily undulating periodization — multiple rep ranges trained each week. Maintains all qualities simultaneously.",
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const e1RM=(w,r)=>{if(r===1)return w;const ep=w*(1+r/30),br=r<37?w/(1.0278-0.0278*r):ep;return Math.round((ep+br)/2);};
+const rl=(v,u)=>{if(!v||v<=0)return 0;const i=u==="kg"?2.5:5;return Math.round(v/i)*i;};
+const h=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const blank=(id,name)=>({id,name,bw:"",unit:"kg",level:"intermediate",gender:"male",rms:Object.fromEntries(EX.map(e=>[e.id,""]))});
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let clients=[],nextId=3,activeId=1;
+let session=[];
+let cZone="hypertrophy",cEx="squat",cSets=3,cReps=10,cPct="";
+let eEx="squat",eW="",eR="",eRes=null;
+let rmQ="";
+let progTab="standards";
+let planModel="linear",planWeeks=8;
+let currentPage="clients";
+
+// ── PERSIST ───────────────────────────────────────────────────────────────
+function save(){localStorage.setItem("sc_coach",JSON.stringify({clients,nextId,activeId}));}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem("sc_coach")||"null");
+    if(d&&d.clients&&d.clients.length){clients=d.clients;nextId=d.nextId||3;activeId=d.activeId||d.clients[0].id;return;}
+  }catch(e){}
+  clients=[blank(1,"Client 1"),blank(2,"Client 2")];nextId=3;activeId=1;
+}
+const gc=()=>clients.find(c=>c.id===activeId)||clients[0];
+function exportData(){
+  const blob=new Blob([JSON.stringify({clients},null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="sc_clients_backup.json";a.click();
+}
+function importData(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.clients){clients=d.clients;save();renderAll();}}catch{alert("Invalid file");}};
+  r.readAsText(f);
+}
+
+// ── CLIENT FUNCTIONS ──────────────────────────────────────────────────────
+function addClient(){const id=nextId++;clients.push(blank(id,`Client ${id}`));activeId=id;save();renderClients();}
+function removeClient(id){
+  if(clients.length<=1){alert("Need at least one client");return;}
+  if(!confirm("Remove this client?"))return;
+  clients=clients.filter(c=>c.id!==id);
+  if(activeId===id)activeId=clients[0].id;
+  save();renderClients();
+}
+function setActive(id){activeId=id;save();renderClients();updateBadge();}
+function updateField(f,v){clients=clients.map(c=>c.id===activeId?{...c,[f]:v}:c);save();}
+function updateRM(ex,v){clients=clients.map(c=>c.id===activeId?{...c,rms:{...c.rms,[ex]:v}}:c);save();}
+function updateBadge(){document.getElementById("active-client-badge").textContent=gc().name;}
+
+// ── RENDER: CLIENTS ───────────────────────────────────────────────────────
+function renderClients(){
+  const c=gc();
+  const filtered=rmQ?EX.filter(e=>e.name.toLowerCase().includes(rmQ.toLowerCase())):EX;
+  const usedCats=rmQ?[...new Set(filtered.map(e=>e.cat))]:CATS;
+  const rmRows=usedCats.map(cat=>{
+    const exs=filtered.filter(e=>e.cat===cat);
+    if(!exs.length)return"";
+    return`<div class="cat-hd">${h(cat)}</div><div class="g2">${exs.map(ex=>`<div><label class="fl-label">${h(ex.name)}</label><input type="number" value="${h(c.rms[ex.id]||"")}" placeholder="0" onchange="updateRM('${ex.id}',this.value);renderCalc()" inputmode="decimal"></div>`).join("")}</div>`;
+  }).join("");
+  document.getElementById("page-clients").innerHTML=`
+  <div class="card">
+    <div class="fljb" style="margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">Clients</div>
+      <button class="ghost" style="padding:6px 12px;font-size:13px;" onclick="addClient()">+ Add</button>
+    </div>
+    <div class="client-scroll">${clients.map(cl=>`<div class="row"><button class="cli-btn ${cl.id===activeId?"active":""}" onclick="setActive(${cl.id})">${h(cl.name)}</button>${clients.length>1?`<button onclick="removeClient(${cl.id})" style="background:none;border:none;color:#9CA3AF;font-size:18px;padding:2px;cursor:pointer;" aria-label="Remove">×</button>`:""}</div>`).join("")}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Profile</div>
+    <div class="g2" style="gap:10px;">
+      <div><label class="fl-label">Name</label><input type="text" value="${h(c.name)}" oninput="updateField('name',this.value);updateBadge();renderClients()"></div>
+      <div><label class="fl-label">Level</label><select onchange="updateField('level',this.value)"><option value="beginner" ${c.level==="beginner"?"selected":""}>Beginner</option><option value="intermediate" ${c.level==="intermediate"?"selected":""}>Intermediate</option><option value="advanced" ${c.level==="advanced"?"selected":""}>Advanced</option></select></div>
+      <div><label class="fl-label">Bodyweight</label><input type="number" value="${h(c.bw||"")}" placeholder="75" inputmode="decimal" onchange="updateField('bw',this.value)"></div>
+      <div class="g2" style="gap:6px;">
+        <div><label class="fl-label">Unit</label><select onchange="updateField('unit',this.value)"><option value="kg" ${c.unit==="kg"?"selected":""}>kg</option><option value="lbs" ${c.unit==="lbs"?"selected":""}>lbs</option></select></div>
+        <div><label class="fl-label">Gender</label><select onchange="updateField('gender',this.value)"><option value="male" ${(c.gender||"male")==="male"?"selected":""}>Male</option><option value="female" ${(c.gender||"male")==="female"?"selected":""}>Female</option></select></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="fljb" style="margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">One-rep max (${h(c.unit)})</div>
+      <span style="font-size:11px;color:var(--dim);">${EX.length} exercises</span>
+    </div>
+    <input type="search" placeholder="Filter exercises…" value="${h(rmQ)}" oninput="rmQ=this.value;renderClients()" style="margin-bottom:12px;">
+    ${rmRows}
+    ${filtered.length===0?`<p style="color:var(--dim);text-align:center;padding:12px 0;font-size:13px;">No exercises match "${h(rmQ)}"</p>`:""}
+  </div>
+  <div class="card">
+    <div class="card-title">1RM estimator</div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:12px;">Average of Epley &amp; Brzycki from a sub-max set (max 36 reps)</p>
+    <div class="g3" style="margin-bottom:10px;">
+      <div><label class="fl-label">Exercise</label><select id="est-ex-sel" onchange="eEx=this.value;eRes=null;">${CATS.map(cat=>`<optgroup label="${h(cat)}">${EX.filter(e=>e.cat===cat).map(e=>`<option value="${e.id}">${h(e.name)}</option>`).join("")}</optgroup>`).join("")}</select></div>
+      <div><label class="fl-label">Weight (${h(c.unit)})</label><input type="number" id="est-w-inp" value="${h(eW)}" placeholder="80" inputmode="decimal" oninput="eW=this.value;eRes=null;document.getElementById('est-result').textContent='';"></div>
+      <div><label class="fl-label">Reps done</label><input type="number" id="est-r-inp" value="${h(eR)}" placeholder="5" min="1" max="36" inputmode="numeric" oninput="eR=this.value;eRes=null;document.getElementById('est-result').textContent='';"></div>
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;">
+      <button onclick="doEstimate()" style="padding:10px 16px;">Calculate 1RM</button>
+      <span id="est-result" style="font-size:15px;font-weight:600;color:var(--text);"></span>
+      <button id="est-apply-btn" style="display:none;background:#3B6D11;padding:10px 16px;" onclick="applyEstimate()">Apply ↗</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Data backup</div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:12px;">Export all client data to a file, or restore from a previous backup.</p>
+    <div class="row" style="flex-wrap:wrap;gap:8px;">
+      <button class="ghost" onclick="exportData()">Export JSON</button>
+      <label style="display:inline-block;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;color:var(--sub);">Import JSON<input type="file" accept=".json" style="display:none;" onchange="importData(this)"></label>
+    </div>
+  </div>`;
+  updateBadge();
+}
+
+function doEstimate(){
+  const w=parseFloat(document.getElementById("est-w-inp")?.value||eW);
+  const r=parseInt(document.getElementById("est-r-inp")?.value||eR);
+  if(!w||!r||r<1||r>36){alert("Enter valid weight and reps (1–36).");return;}
+  eEx=document.getElementById("est-ex-sel")?.value||eEx;
+  eRes=e1RM(w,r);
+  const c=gc();
+  document.getElementById("est-result").textContent=`Estimated: ${eRes} ${c.unit}`;
+  const btn=document.getElementById("est-apply-btn");
+  if(btn)btn.style.display="inline-block";
+}
+function applyEstimate(){
+  if(!eRes)return;
+  updateRM(eEx,String(eRes));
+  eRes=null;eW="";eR="";
+  document.getElementById("est-result").textContent="Applied ✓";
+  const btn=document.getElementById("est-apply-btn");
+  if(btn)btn.style.display="none";
+}
+
+// ── RENDER: CALCULATOR ────────────────────────────────────────────────────
+function renderCalc(){
+  const c=gc();
+  const zone=ZONES.find(z=>z.id===cZone)||ZONES[3];
+  const rm=parseFloat(c.rms[cEx])||0;
+  const midPct=(zone.pL+zone.pH)/2;
+  const pct=parseFloat(cPct)||midPct;
+  const load=rm>0?rl(rm*pct/100,c.unit):null;
+  const vol=load?cSets*cReps*load:null;
+  const zBar=`<div class="z-bar">${[...ZONES].reverse().map(z=>`<div class="z-seg" style="flex:${z.pH-z.pL};background:${z.col};opacity:${z.id===cZone?1:0.3};" title="${h(z.name)}" onclick="cZone='${z.id}';renderCalc()"></div>`).join("")}</div>`;
+  const exOpts=CATS.map(cat=>`<optgroup label="${h(cat)}">${EX.filter(e=>e.cat===cat).map(e=>`<option value="${e.id}" ${e.id===cEx?"selected":""}>${h(e.name)}</option>`).join("")}</optgroup>`).join("");
+  const zoneOpts=ZONES.map(z=>`<option value="${z.id}" ${z.id===cZone?"selected":""}>${h(z.name)} (${z.pL}–${z.pH}%)</option>`).join("");
+  const result=rm>0?`
+    <div class="card" style="border-left:4px solid ${zone.col};">
+      <div class="g4" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+        <div class="metric"><div class="mval" style="color:${zone.col};">${load}</div><div class="mlbl">${h(c.unit)} load</div></div>
+        <div class="metric"><div class="mval">${Math.round(pct)}%</div><div class="mlbl">of 1RM</div></div>
+        <div class="metric"><div class="mval">${cSets}×${cReps}</div><div class="mlbl">sets×reps</div></div>
+        <div class="metric"><div class="mval">${(vol||0).toLocaleString()}</div><div class="mlbl">volume</div></div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;">
+        <p style="font-size:11px;color:var(--sub);margin-bottom:8px;font-weight:500;">Zone load range — rounded to ${c.unit==="kg"?"2.5 kg":"5 lb"}</p>
+        <div class="g3">
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:600;color:var(--sub);">${rl(rm*zone.pL/100,c.unit)}</div><div style="font-size:10px;color:var(--dim);">${zone.pL}% min</div></div>
+          <div style="text-align:center;background:${zone.bg};border-radius:6px;padding:8px;"><div style="font-size:22px;font-weight:700;color:${zone.col};">${load}</div><div style="font-size:10px;color:${zone.col};font-weight:500;">midpoint</div></div>
+          <div style="text-align:center;"><div style="font-size:18px;font-weight:600;color:var(--sub);">${rl(rm*zone.pH/100,c.unit)}</div><div style="font-size:10px;color:var(--dim);">${zone.pH}% max</div></div>
+        </div>
+      </div>
+      <div class="g3" style="margin-bottom:14px;">
+        <div class="metric"><div class="mval" style="font-size:15px;">RPE ${zone.rpe}</div><div class="mlbl">target effort</div></div>
+        <div class="metric"><div class="mval" style="font-size:15px;">${zone.rL}–${zone.rH}</div><div class="mlbl">suggested reps</div></div>
+        <div class="metric"><div class="mval" style="font-size:15px;">${zone.sets}</div><div class="mlbl">suggested sets</div></div>
+      </div>
+      <button onclick="addToSession()" style="width:100%;padding:13px;font-size:15px;background:${zone.col};">+ Add to session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">All zones — ${h(EX.find(e=>e.id===cEx)?.name||"")}</div>
+      ${ZONES.map(z=>{const lo=rl(rm*z.pL/100,c.unit),hi=rl(rm*z.pH/100,c.unit);return`<div onclick="cZone='${z.id}';renderCalc()" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:8px;margin-bottom:3px;cursor:pointer;background:${z.id===cZone?"var(--bg)":"transparent"};border:1px solid ${z.id===cZone?z.col+"44":"transparent"};"><div style="width:9px;height:9px;border-radius:50%;background:${z.col};flex-shrink:0;"></div><span style="flex:1;font-size:13px;color:var(--sub);">${h(z.name)}</span><span style="font-size:11px;color:var(--dim);width:64px;text-align:center;">${z.pL}–${z.pH}%</span><span style="font-size:13px;font-weight:600;color:${z.col};width:100px;text-align:right;">${lo}–${hi} ${h(c.unit)}</span></div>`;}).join("")}
+    </div>`:`<div class="card" style="text-align:center;padding:28px 16px;"><p style="color:var(--sub);margin-bottom:12px;">Enter the 1RM for <strong>${h(EX.find(e=>e.id===cEx)?.name||"")}</strong> in the Clients tab first</p><button class="ghost" onclick="nav('clients')">Go to Clients ↗</button></div>`;
+  document.getElementById("page-calc").innerHTML=`
+  <div class="card" style="padding:14px;">
+    <p style="font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:500;">Intensity continuum — tap a zone to select</p>
+    ${zBar}
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:5px;"><span>← Endurance 40%</span><span>Hypertrophy</span><span>Strength</span><span>100% Max →</span></div>
+  </div>
+  <div class="card">
+    <div class="g2" style="margin-bottom:10px;">
+      <div><label class="fl-label">Goal / zone</label><select onchange="cZone=this.value;renderCalc()" style="border-color:${zone.col}88;">${zoneOpts}</select></div>
+      <div><label class="fl-label">Exercise</label><select onchange="cEx=this.value;renderCalc()">${exOpts}</select></div>
+      <div><label class="fl-label">Sets</label><input type="number" value="${cSets}" min="1" max="10" inputmode="numeric" oninput="cSets=Math.max(1,parseInt(this.value)||1);renderCalc()"></div>
+      <div><label class="fl-label">Reps per set</label><input type="number" value="${cReps}" min="1" max="30" inputmode="numeric" oninput="cReps=Math.max(1,parseInt(this.value)||1);renderCalc()"></div>
+    </div>
+    <div><label class="fl-label">Custom intensity % <span style="font-size:10px;">(optional — overrides midpoint)</span></label><input type="number" value="${h(cPct||"")}" placeholder="${Math.round(midPct)}% zone midpoint" min="30" max="110" inputmode="decimal" oninput="cPct=this.value;renderCalc()"></div>
+  </div>
+  ${result}`;
+}
+
+// ── SESSION ───────────────────────────────────────────────────────────────
+function addToSession(){
+  const c=gc();const zone=ZONES.find(z=>z.id===cZone)||ZONES[3];
+  const rm=parseFloat(c.rms[cEx])||0;
+  const pct=parseFloat(cPct)||((zone.pL+zone.pH)/2);
+  const load=rm>0?rl(rm*pct/100,c.unit):null;
+  session.push({id:Date.now(),ex:EX.find(e=>e.id===cEx)?.name,zone:zone.name,col:zone.col,
+    sets:cSets,reps:cReps,pct:Math.round(pct),load,unit:c.unit,rpe:zone.rpe,
+    vol:load?cSets*cReps*load:null,hasRM:rm>0});
+  updateSessionBadge();nav("session");
+}
+function removeFromSession(id){session=session.filter(e=>e.id!==id);updateSessionBadge();renderSession();}
+function clearSession(){if(!confirm("Clear the session?"))return;session=[];updateSessionBadge();renderSession();}
+function updateSessionBadge(){
+  const lbl=document.getElementById("nb-session-label");
+  if(lbl)lbl.textContent=session.length?`Session (${session.length})`:"Session";
+}
+function renderSession(){
+  const c=gc();
+  const tv=session.reduce((s,e)=>s+(e.vol||0),0);
+  const ts=session.reduce((s,e)=>s+e.sets,0);
+  const tr=session.reduce((s,e)=>s+e.sets*e.reps,0);
+  const empty=`<div class="card" style="text-align:center;padding:28px;"><p style="color:var(--sub);margin-bottom:12px;">No exercises yet. Build your session in the calculator.</p><button class="ghost" onclick="nav('calc')">Open calculator ↗</button></div>`;
+  const list=session.map((ex,i)=>`<div class="sess-card" style="border-left-color:${ex.col};"><div class="row"><div style="width:26px;height:26px;border-radius:50%;background:${ex.col}22;border:1.5px solid ${ex.col};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${ex.col};flex-shrink:0;">${i+1}</div><div style="flex:1;"><div style="font-size:15px;font-weight:600;margin-bottom:4px;">${h(ex.ex||"")}</div><div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;"><span class="badge" style="background:${ex.col}22;color:${ex.col};">${h(ex.zone)}</span><span style="font-size:13px;font-weight:500;">${ex.sets}×${ex.reps}</span>${ex.hasRM&&ex.load?`<span style="font-size:13px;font-weight:600;">${ex.load} ${h(ex.unit)}</span>`:""}<span style="font-size:12px;color:var(--sub);">${ex.pct}% 1RM</span><span style="font-size:12px;color:var(--sub);">RPE ${h(ex.rpe)}</span>${ex.vol?`<span style="font-size:11px;color:var(--dim);">Vol: ${ex.vol.toLocaleString()}</span>`:""}</div></div><button onclick="removeFromSession(${ex.id})" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:20px;padding:4px;flex-shrink:0;" aria-label="Remove">×</button></div></div>`).join("");
+  const summary=session.length?`<div class="card" style="border:1px solid var(--border);"><div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-weight:600;">Session summary</div><div class="g4"><div class="metric"><div class="mval">${session.length}</div><div class="mlbl">Exercises</div></div><div class="metric"><div class="mval">${ts}</div><div class="mlbl">Total sets</div></div><div class="metric"><div class="mval">${tr}</div><div class="mlbl">Total reps</div></div><div class="metric"><div class="mval">${Math.round(tv).toLocaleString()}</div><div class="mlbl">Volume (${h(session[0]?.unit||"kg")})</div></div></div></div>`:"";
+  document.getElementById("page-session").innerHTML=`
+  <div class="fljb" style="margin-bottom:12px;">
+    <div style="font-size:16px;font-weight:600;">Session — ${h(c.name)}</div>
+    <div class="row">${session.length?`<button onclick="printSession()" style="padding:8px 12px;font-size:13px;">Export</button><button class="danger" onclick="clearSession()" style="font-size:12px;padding:8px;">Clear</button>`:""}</div>
+  </div>
+  ${session.length===0?empty:list+summary}`;
+}
+function printSession(){
+  const c=gc();
+  const date=new Date().toLocaleDateString("en-GB",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+  const tv=Math.round(session.reduce((s,e)=>s+(e.vol||0),0));
+  const ts=session.reduce((s,e)=>s+e.sets,0);
+  const tr=session.reduce((s,e)=>s+e.sets*e.reps,0);
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Session — ${c.name}</title><style>*{box-sizing:border-box;}body{font-family:system-ui,sans-serif;padding:24px;color:#111;max-width:800px;margin:0 auto;}h1{font-size:20px;font-weight:700;margin-bottom:4px;}.sub{color:#666;font-size:13px;margin-bottom:18px;}table{width:100%;border-collapse:collapse;margin-bottom:18px;font-size:13px;}th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;}td{padding:10px 6px;border-bottom:1px solid #f0f0f0;}.sum{display:flex;gap:20px;background:#f5f5f5;padding:14px;border-radius:8px;margin-bottom:18px;}.sv{font-size:20px;font-weight:700;}.sl{font-size:11px;color:#666;}.pb{background:#111;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:20px;}@media print{.pb{display:none;}}</style></head><body><button class="pb" onclick="window.print()">Print / Save as PDF</button><h1>Training session — ${c.name}</h1><p class="sub">${date} · ${c.level} · ${c.unit}</p><div class="sum"><div><div class="sv">${session.length}</div><div class="sl">Exercises</div></div><div><div class="sv">${ts}</div><div class="sl">Total sets</div></div><div><div class="sv">${tr}</div><div class="sl">Total reps</div></div><div><div class="sv">${tv.toLocaleString()} ${session[0]?.unit||"kg"}</div><div class="sl">Total volume</div></div></div><table><thead><tr><th>#</th><th>Exercise</th><th>Zone</th><th>Sets×Reps</th><th>Load</th><th>%1RM</th><th>RPE</th><th>Volume</th><th>Notes</th></tr></thead><tbody>${session.map((ex,i)=>`<tr><td>${i+1}</td><td><strong>${ex.ex||""}</strong></td><td>${ex.zone||""}</td><td>${ex.sets}×${ex.reps}</td><td>${ex.hasRM&&ex.load?`${ex.load} ${ex.unit}`:"—"}</td><td>${ex.pct}%</td><td>${ex.rpe||""}</td><td>${ex.vol?Math.round(ex.vol).toLocaleString()+" "+ex.unit:"—"}</td><td></td></tr>`).join("")}</tbody></table><p style="font-size:11px;color:#bbb;">Generated by S&C Coach Toolkit</p></body></html>`;
+  const win=window.open("about:blank","_blank");
+  if(win){win.document.write(html);win.document.close();}else alert("Allow pop-ups for the print view.");
+}
+
+// ── PROGRAM TAB (Standards + Plan) ────────────────────────────────────────
+function renderProgram(){
+  const c=gc();const bw=parseFloat(c.bw)||0;
+  const toggle=`<div class="toggle-row"><button class="toggle-btn ${progTab==="standards"?"active":""}" onclick="progTab='standards';renderProgram()">Strength standards</button><button class="toggle-btn ${progTab==="plan"?"active":""}" onclick="progTab='plan';renderProgram()">Periodization plan</button></div>`;
+  let content="";
+  if(progTab==="standards"){
+    if(!bw){content=`<div class="card" style="text-align:center;padding:28px;"><p style="color:var(--sub);margin-bottom:12px;">Enter your bodyweight in the Clients tab to see standards.</p><button class="ghost" onclick="nav('clients')">Go to Clients ↗</button></div>`;}
+    else{
+      const genderToggle=`<div class="toggle-row" style="margin-bottom:14px;"><button class="toggle-btn ${(c.gender||"male")==="male"?"active":""}" onclick="updateField('gender','male');renderProgram()">Male</button><button class="toggle-btn ${(c.gender||"male")==="female"?"active":""}" onclick="updateField('gender','female');renderProgram()">Female</button></div>`;
+      const stdCards=Object.values(STDS).map(std=>{
+        const t=std[c.gender||"male"];
+        const rm=parseFloat(c.rms[std.exId])||0;
+        const ratio=rm>0?rm/bw:0;
+        let lvl=-1;for(let i=t.length-1;i>=0;i--){if(ratio>=t[i]){lvl=i;break;}}
+        const tkg=i=>{const raw=t[i]*bw;return c.unit==="lbs"?Math.round(raw*2.205*10)/10:Math.round(raw*10)/10;};
+        return`<div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border);">
+          <div class="fljb" style="margin-bottom:8px;"><span style="font-size:14px;font-weight:600;">${h(std.name)}</span>${rm>0?`<span style="font-size:12px;color:var(--sub);">1RM: <strong>${rm}</strong> ${h(c.unit)} = <strong>${Math.round(ratio*100)/100}×</strong>BW</span>`:`<span style="font-size:11px;color:var(--dim);">No 1RM entered</span>`}</div>
+          <div class="std-bar">${STD_LBL.map((_,i)=>`<div class="std-seg" style="background:${STD_COL[i]};opacity:${rm>0&&i<=lvl?1:.15};"></div>`).join("")}</div>
+          <div style="display:flex;margin-bottom:8px;">${STD_LBL.map((l,i)=>`<div style="flex:1;text-align:center;"><div style="font-size:8px;color:${rm>0&&i===lvl?STD_COL[i]:"var(--dim)"};font-weight:${rm>0&&i===lvl?700:400};text-transform:uppercase;">${l.substring(0,4)}</div><div style="font-size:10px;color:var(--dim);">${tkg(i)}</div></div>`).join("")}</div>
+          ${rm>0?`<div style="font-size:12px;margin-top:4px;"><span style="background:${STD_COL[Math.max(0,lvl)]}22;color:${STD_COL[Math.max(0,lvl)]};padding:2px 9px;border-radius:20px;font-weight:600;">${lvl>=0?STD_LBL[lvl]:"Below untrained"}</span>${lvl<t.length-1?`<span style="color:var(--sub);margin-left:8px;font-size:12px;">Next: <strong>${STD_LBL[lvl+1]}</strong> = ${tkg(lvl+1)} ${h(c.unit)}</span>`:`<span style="color:#3B6D11;margin-left:8px;font-weight:600;font-size:12px;">Elite standard achieved!</span>`}</div>`:""}</div>`;
+      }).join("");
+      content=`<div class="card">${genderToggle}${stdCards}<p style="font-size:11px;color:var(--dim);margin-top:4px;">Standards adapted from Symmetric Strength & ExRx. Use as benchmarks, not absolute targets.</p></div>`;
+    }
+  } else {
+    const isDUP=planModel==="dup";
+    const planRows=isDUP?[
+      {week:"A",phase:"Heavy",zone:"strength",pct:"80–89%",sets:"3–5",rpe:"8–9"},
+      {week:"B",phase:"Moderate",zone:"hypertrophy",pct:"67–77%",sets:"3–4",rpe:"7–8"},
+      {week:"C",phase:"Light",zone:"strHyp",pct:"75–82%",sets:"3–4",rpe:"7–8"},
+      {week:"D*",phase:"Power",zone:"maxStrength",pct:"88–93%",sets:"3–5",rpe:"8–9"},
+    ]:genPlanRows(planModel,planWeeks);
+    const planTable=`<div class="plan-hdr"><span>${isDUP?"Sess":"Wk"}</span><span>Phase</span><span>Zone</span><span>%</span><span>Sets</span><span>RPE</span></div>${planRows.map(r=>{const z=ZONES.find(z2=>z2.id===r.zone)||ZONES[3];return`<div class="plan-row" style="background:${z.bg};border:1px solid ${z.col}33;"><span style="font-size:11px;font-weight:700;color:${z.col};">${isDUP?"S"+r.week:r.week}</span><span>${h(r.phase)}</span><span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:12px;background:${z.col}22;color:${z.col};">${h(z.name.split("-")[0])}</span><span style="font-weight:600;">${h(r.pct)}</span><span>${h(r.sets)}</span><span style="color:var(--sub);">${h(r.rpe)}</span></div>`;}).join("")}${isDUP?`<p style="font-size:11px;color:var(--dim);margin-top:8px;">*Session D optional. Repeat weekly throughout the block.</p>`:""}`;
+    content=`<div class="card"><div class="g2" style="margin-bottom:12px;"><div><label class="fl-label">Model</label><select onchange="planModel=this.value;renderProgram()"><option value="linear" ${planModel==="linear"?"selected":""}>Linear</option><option value="block" ${planModel==="block"?"selected":""}>Block</option><option value="dup" ${planModel==="dup"?"selected":""}>Daily undulating (DUP)</option></select></div>${!isDUP?`<div><label class="fl-label">Duration</label><select onchange="planWeeks=parseInt(this.value);renderProgram()"><option value="4" ${planWeeks===4?"selected":""}>4 weeks</option><option value="8" ${planWeeks===8?"selected":""}>8 weeks</option><option value="12" ${planWeeks===12?"selected":""}>12 weeks</option><option value="16" ${planWeeks===16?"selected":""}>16 weeks</option></select></div>`:""}</div><p style="font-size:12px;color:var(--sub);padding:10px;background:var(--bg);border-radius:8px;margin-bottom:14px;">${h(PLAN_DESC[planModel])}</p>${planTable}</div>`;
+  }
+  document.getElementById("page-program").innerHTML=toggle+content;
+}
+
+function genPlanRows(model,weeks){
+  const rows=[];
+  if(model==="linear"){
+    for(let i=1;i<=weeks;i++){
+      if(i===weeks){rows.push({week:i,phase:"Deload",zone:"endurance",pct:"40–55%",sets:"2",rpe:"5–6"});}
+      else{const p=(i-1)/(weeks-2);if(p<.35)rows.push({week:i,phase:"Accumulation",zone:"hypertrophy",pct:"65–75%",sets:"4",rpe:"7–8"});else if(p<.65)rows.push({week:i,phase:"Intensification",zone:"strHyp",pct:"75–82%",sets:"3–4",rpe:"7–9"});else rows.push({week:i,phase:"Realization",zone:"strength",pct:"82–89%",sets:"3",rpe:"8–9"});}
+    }
+  } else {
+    const mw=weeks-1;const acc=Math.max(2,Math.round(mw*.4)),tr=Math.max(2,Math.round(mw*.35));
+    for(let i=1;i<=weeks;i++){
+      if(i<=acc)rows.push({week:i,phase:"Accumulation",zone:"hypertrophy",pct:"65–77%",sets:"4–5",rpe:"7–8"});
+      else if(i<=acc+tr)rows.push({week:i,phase:"Transmutation",zone:"strHyp",pct:"78–87%",sets:"3–4",rpe:"7–9"});
+      else if(i<weeks)rows.push({week:i,phase:"Realization",zone:"strength",pct:"85–97%",sets:"2–3",rpe:"8–10"});
+      else rows.push({week:i,phase:"Deload",zone:"endurance",pct:"40–55%",sets:"2",rpe:"5–6"});
+    }
+  }
+  return rows;
+}
+
+// ── GUIDE TAB (Zones + RPE) ───────────────────────────────────────────────
+function renderGuide(){
+  const zoneCards=ZONES.map(z=>`<div class="zone-ref"><div class="fljb" style="margin-bottom:8px;"><div class="row"><div style="width:10px;height:10px;border-radius:50%;background:${z.col};flex-shrink:0;"></div><span style="font-weight:600;color:${z.col};font-size:14px;">${h(z.name)}</span></div><span style="font-size:14px;font-weight:700;">${z.pL}–${z.pH}%</span></div><div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:10px;overflow:hidden;"><div style="height:100%;background:${z.col};width:${(z.pH/105*100).toFixed(0)}%;border-radius:2px;"></div></div><div class="g4" style="gap:6px;">${[{l:"Reps",v:`${z.rL}–${z.rH}`},{l:"Sets",v:z.sets},{l:"RPE",v:z.rpe},{l:"Goal",v:z.desc}].map(({l,v})=>`<div style="background:var(--bg);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:2px;">${l}</div><div style="font-size:12px;font-weight:500;">${h(v)}</div></div>`).join("")}</div></div>`).join("");
+  const rpeRows=[
+    {rpe:10,desc:"Absolute max — no reps left",col:"#A32D2D"},
+    {rpe:9,desc:"1 rep left in the tank",col:"#993C1D"},
+    {rpe:8,desc:"1–2 reps in reserve",col:"#854F0B"},
+    {rpe:7,desc:"2–3 reps in reserve",col:"#3B6D11"},
+    {rpe:6,desc:"3–4 reps remaining",col:"#185FA5"},
+    {rpe:5,desc:"Comfortable, recovery pace",col:"#185FA5"},
+  ].map(({rpe,desc,col})=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);"><div style="width:32px;height:32px;border-radius:50%;background:${col}22;border:1.5px solid ${col};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${col};flex-shrink:0;">${rpe}</div><span style="font-size:13px;color:var(--sub);">${h(desc)}</span></div>`).join("");
+  const install=`<div class="install-tip"><strong>📱 Add to your home screen</strong><b>iPhone/iPad:</b> Open in Safari → tap Share → "Add to Home Screen"<br><b>Android:</b> Open in Chrome → tap ⋮ menu → "Add to Home Screen"<br><br>It will work like a native app — no app store needed.</div>`;
+  document.getElementById("page-guide").innerHTML=`${install}<div class="card"><div class="card-title">Training intensity zones</div>${zoneCards}</div><div class="card"><div class="card-title">RPE — rate of perceived exertion</div>${rpeRows}</div>`;
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────
+const PAGE_TITLES={clients:"Clients",calc:"Load calculator",session:"Session",program:"Program",guide:"Guide"};
+function nav(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nb").forEach(b=>b.classList.remove("active"));
+  document.getElementById(`page-${id}`).classList.add("active");
+  document.getElementById(`nb-${id}`).classList.add("active");
+  document.getElementById("page-title").textContent=PAGE_TITLES[id]||"";
+  currentPage=id;
+  if(id==="clients")renderClients();
+  else if(id==="calc")renderCalc();
+  else if(id==="session")renderSession();
+  else if(id==="program")renderProgram();
+  else if(id==="guide")renderGuide();
+}
+
+function renderAll(){nav(currentPage);}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+load();
+renderClients();
+updateBadge();
+</script>
+</body>
+</html>
