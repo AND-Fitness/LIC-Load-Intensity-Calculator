@@ -1,0 +1,1 @@
+# LIC-Load-Intensity-Calculator
