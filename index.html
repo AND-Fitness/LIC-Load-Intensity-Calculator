@@ -47,8 +47,8 @@ button.accent{background:var(--accent);color:#fff;}
 .z-seg{flex:1;cursor:pointer;transition:opacity .18s;}
 /* Bottom nav */
 #bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--border);display:flex;padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:100;}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--dim);font-weight:500;}
-.nb svg{width:22px;height:22px;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 1px;background:none;border:none;cursor:pointer;font-size:9.5px;color:var(--dim);font-weight:500;min-width:0;}
+.nb svg{width:20px;height:20px;stroke-width:1.75;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;}
 .nb.active{color:var(--accent);}
 /* Header */
 .app-hdr{padding:16px 16px 0;padding-top:calc(16px + env(safe-area-inset-top));}
@@ -91,6 +91,7 @@ button.accent{background:var(--accent);color:#fff;}
 <!-- Pages -->
 <div id="page-clients" class="page active"></div>
 <div id="page-calc" class="page"></div>
+<div id="page-cond" class="page"></div>
 <div id="page-session" class="page"></div>
 <div id="page-program" class="page"></div>
 <div id="page-guide" class="page"></div>
@@ -103,7 +104,11 @@ button.accent{background:var(--accent);color:#fff;}
   </button>
   <button class="nb" onclick="nav('calc')" id="nb-calc">
     <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    Calc
+    Load
+  </button>
+  <button class="nb" onclick="nav('cond')" id="nb-cond">
+    <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    Cond.
   </button>
   <button class="nb" onclick="nav('session')" id="nb-session">
     <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
@@ -209,6 +214,59 @@ const PLAN_DESC={
   dup:"Daily undulating periodization — multiple rep ranges trained each week. Maintains all qualities simultaneously.",
 };
 
+// ── CONDITIONING DATA ─────────────────────────────────────────────────────
+// Energy systems double as the intensity "zones" for conditioning.
+const ENERGY_SYSTEMS=[
+  {id:"alactic",name:"Alactic power",short:"Alactic",col:"#A32D2D",bg:"#FEF2F2",hrZone:"Z5",hrPct:"90–100%",rpe:"9–10",work:"6–15 sec",rest:"Long (1:6–1:10)",desc:"Max-effort sprints & power. Full recovery between efforts.",examples:"Sprints, sled push, jumps, throws"},
+  {id:"anaerobic",name:"Anaerobic / glycolytic",short:"Anaerobic",col:"#993C1D",bg:"#FFF7ED",hrZone:"Z4–Z5",hrPct:"85–95%",rpe:"8–9",work:"20–60 sec",rest:"Short (1:1–1:3)",desc:"The classic 'burn'. HIIT & hard intervals that build lactate tolerance.",examples:"Bike, row, KB swings, burpees, shuttle runs"},
+  {id:"vo2",name:"Aerobic power (VO₂)",short:"VO₂",col:"#854F0B",bg:"#FFFBEB",hrZone:"Z4",hrPct:"85–92%",rpe:"7–9",work:"2–5 min",rest:"Equal (1:1)",desc:"Hard-but-sustainable intervals that raise your aerobic ceiling.",examples:"Run, row, bike, ski erg, hard efforts"},
+  {id:"threshold",name:"Threshold / tempo",short:"Threshold",col:"#3B6D11",bg:"#F0FDF4",hrZone:"Z3",hrPct:"80–88%",rpe:"6–7",work:"8–20 min",rest:"Minimal",desc:"'Comfortably hard' sustained work. Builds the lactate threshold.",examples:"Tempo run, steady row, continuous bike"},
+  {id:"aerobic",name:"Aerobic base (Zone 2)",short:"Zone 2",col:"#185FA5",bg:"#EFF6FF",hrZone:"Z1–Z2",hrPct:"60–75%",rpe:"3–5",work:"20–60 min",rest:"Continuous",desc:"Conversational pace. Builds the aerobic engine & aids recovery.",examples:"Easy run, walk, cycle, swim, ruck"},
+];
+
+const HR_ZONES=[
+  {z:"Z1",name:"Recovery",pct:"50–60%",rpe:"1–2",col:"#185FA5",desc:"Very easy. Active recovery, warm-up."},
+  {z:"Z2",name:"Aerobic base",pct:"60–75%",rpe:"3–4",col:"#2E7D32",desc:"Conversational. Builds endurance engine."},
+  {z:"Z3",name:"Tempo",pct:"75–85%",rpe:"5–6",col:"#3B6D11",desc:"Comfortably hard. Threshold work."},
+  {z:"Z4",name:"Threshold",pct:"85–92%",rpe:"7–8",col:"#854F0B",desc:"Hard. Sustainable only for minutes."},
+  {z:"Z5",name:"Max",pct:"92–100%",rpe:"9–10",col:"#A32D2D",desc:"All-out. Seconds to a couple minutes."},
+];
+
+const COND_FORMATS=[
+  {id:"intervals",name:"Intervals",desc:"Set work + rest, repeat for rounds.",fields:["work","rest","rounds"]},
+  {id:"emom",name:"EMOM",desc:"Every Minute On the Minute — work, rest the remainder.",fields:["emomMin","emomWork"]},
+  {id:"amrap",name:"AMRAP",desc:"As Many Rounds As Possible in a time cap.",fields:["cap"]},
+  {id:"tabata",name:"Tabata",desc:"20s on / 10s off × 8 (4 min). The classic protocol.",fields:[]},
+  {id:"circuit",name:"Circuit",desc:"Stations back-to-back, rest, repeat rounds.",fields:["stations","stationWork","circuitRest","rounds"]},
+  {id:"steady",name:"Steady-state",desc:"Continuous effort for a set duration.",fields:["duration"]},
+];
+
+const COND_MOVES=[
+  {id:"run",name:"Run",cat:"Machine / run"},
+  {id:"row",name:"Row (erg)",cat:"Machine / run"},
+  {id:"bike",name:"Assault/echo bike",cat:"Machine / run"},
+  {id:"ski",name:"Ski erg",cat:"Machine / run"},
+  {id:"cycle",name:"Cycle",cat:"Machine / run"},
+  {id:"sprint",name:"Sprint",cat:"Machine / run"},
+  {id:"burpee",name:"Burpee",cat:"Bodyweight"},
+  {id:"jumpingJack",name:"Jumping jacks",cat:"Bodyweight"},
+  {id:"mountainClimb",name:"Mountain climbers",cat:"Bodyweight"},
+  {id:"jumpSquat",name:"Jump squats",cat:"Bodyweight"},
+  {id:"jumpRope",name:"Jump rope",cat:"Bodyweight"},
+  {id:"highKnees",name:"High knees",cat:"Bodyweight"},
+  {id:"kbSwing",name:"KB swing",cat:"Loaded"},
+  {id:"wallBall",name:"Wall ball",cat:"Loaded"},
+  {id:"thruster",name:"Thruster",cat:"Loaded"},
+  {id:"sledPush",name:"Sled push",cat:"Loaded"},
+  {id:"sledPull",name:"Sled pull",cat:"Loaded"},
+  {id:"battleRope",name:"Battle ropes",cat:"Loaded"},
+  {id:"farmerCarry",name:"Farmer carry",cat:"Loaded"},
+  {id:"boxJump",name:"Box jump",cat:"Loaded"},
+  {id:"shuttle",name:"Shuttle run",cat:"Mixed"},
+  {id:"custom",name:"Custom / other",cat:"Mixed"},
+];
+const COND_MOVE_CATS=[...new Set(COND_MOVES.map(m=>m.cat))];
+
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const e1RM=(w,r)=>{if(r===1)return w;const ep=w*(1+r/30),br=r<37?w/(1.0278-0.0278*r):ep;return Math.round((ep+br)/2);};
 const rl=(v,u)=>{if(!v||v<=0)return 0;const i=u==="kg"?2.5:5;return Math.round(v/i)*i;};
@@ -224,6 +282,12 @@ let rmQ="";
 let progTab="standards";
 let planModel="linear",planWeeks=8;
 let currentPage="clients";
+// Conditioning state
+let condSystem="anaerobic";
+let condFormat="intervals";
+let condMove="row";
+let condCustomName="";
+let condF={work:30,rest:30,rounds:8,emomMin:10,emomWork:40,cap:12,stations:4,stationWork:40,circuitRest:60,duration:20};
 
 // ── PERSIST ───────────────────────────────────────────────────────────────
 function save(){localStorage.setItem("sc_coach",JSON.stringify({clients,nextId,activeId}));}
@@ -408,7 +472,7 @@ function addToSession(){
   const rm=parseFloat(c.rms[cEx])||0;
   const pct=parseFloat(cPct)||((zone.pL+zone.pH)/2);
   const load=rm>0?rl(rm*pct/100,c.unit):null;
-  session.push({id:Date.now(),ex:EX.find(e=>e.id===cEx)?.name,zone:zone.name,col:zone.col,
+  session.push({id:Date.now(),type:"strength",ex:EX.find(e=>e.id===cEx)?.name,zone:zone.name,col:zone.col,
     sets:cSets,reps:cReps,pct:Math.round(pct),load,unit:c.unit,rpe:zone.rpe,
     vol:load?cSets*cReps*load:null,hasRM:rm>0});
   updateSessionBadge();nav("session");
@@ -421,28 +485,184 @@ function updateSessionBadge(){
 }
 function renderSession(){
   const c=gc();
-  const tv=session.reduce((s,e)=>s+(e.vol||0),0);
-  const ts=session.reduce((s,e)=>s+e.sets,0);
-  const tr=session.reduce((s,e)=>s+e.sets*e.reps,0);
-  const empty=`<div class="card" style="text-align:center;padding:28px;"><p style="color:var(--sub);margin-bottom:12px;">No exercises yet. Build your session in the calculator.</p><button class="ghost" onclick="nav('calc')">Open calculator ↗</button></div>`;
-  const list=session.map((ex,i)=>`<div class="sess-card" style="border-left-color:${ex.col};"><div class="row"><div style="width:26px;height:26px;border-radius:50%;background:${ex.col}22;border:1.5px solid ${ex.col};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${ex.col};flex-shrink:0;">${i+1}</div><div style="flex:1;"><div style="font-size:15px;font-weight:600;margin-bottom:4px;">${h(ex.ex||"")}</div><div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;"><span class="badge" style="background:${ex.col}22;color:${ex.col};">${h(ex.zone)}</span><span style="font-size:13px;font-weight:500;">${ex.sets}×${ex.reps}</span>${ex.hasRM&&ex.load?`<span style="font-size:13px;font-weight:600;">${ex.load} ${h(ex.unit)}</span>`:""}<span style="font-size:12px;color:var(--sub);">${ex.pct}% 1RM</span><span style="font-size:12px;color:var(--sub);">RPE ${h(ex.rpe)}</span>${ex.vol?`<span style="font-size:11px;color:var(--dim);">Vol: ${ex.vol.toLocaleString()}</span>`:""}</div></div><button onclick="removeFromSession(${ex.id})" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:20px;padding:4px;flex-shrink:0;" aria-label="Remove">×</button></div></div>`).join("");
-  const summary=session.length?`<div class="card" style="border:1px solid var(--border);"><div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-weight:600;">Session summary</div><div class="g4"><div class="metric"><div class="mval">${session.length}</div><div class="mlbl">Exercises</div></div><div class="metric"><div class="mval">${ts}</div><div class="mlbl">Total sets</div></div><div class="metric"><div class="mval">${tr}</div><div class="mlbl">Total reps</div></div><div class="metric"><div class="mval">${Math.round(tv).toLocaleString()}</div><div class="mlbl">Volume (${h(session[0]?.unit||"kg")})</div></div></div></div>`:"";
+  const strengthItems=session.filter(e=>e.type!=="cond");
+  const condItems=session.filter(e=>e.type==="cond");
+  const tv=strengthItems.reduce((s,e)=>s+(e.vol||0),0);
+  const ts=strengthItems.reduce((s,e)=>s+(e.sets||0),0);
+  const tr=strengthItems.reduce((s,e)=>s+(e.sets||0)*(e.reps||0),0);
+  const condSec=condItems.reduce((s,e)=>s+(e.totalSec||0),0);
+  const empty=`<div class="card" style="text-align:center;padding:28px;"><p style="color:var(--sub);margin-bottom:12px;">Nothing here yet. Build strength work in <strong>Load</strong> or a piece in <strong>Cond.</strong></p><div class="row" style="justify-content:center;"><button class="ghost" onclick="nav('calc')">Load ↗</button><button class="ghost" onclick="nav('cond')">Conditioning ↗</button></div></div>`;
+  const card=(ex,i)=>{
+    if(ex.type==="cond"){
+      return `<div class="sess-card" style="border-left-color:${ex.col};"><div class="row"><div style="width:26px;height:26px;border-radius:50%;background:${ex.col}22;border:1.5px solid ${ex.col};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${ex.col};flex-shrink:0;">${i+1}</div><div style="flex:1;"><div style="font-size:15px;font-weight:600;margin-bottom:4px;">${h(ex.move||"")}</div><div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;"><span class="badge" style="background:${ex.col}22;color:${ex.col};">${h(ex.systemShort||ex.system||"")}</span><span style="font-size:13px;font-weight:500;">${h(ex.prescription||"")}</span></div><div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:3px;"><span style="font-size:12px;color:var(--sub);">${h(ex.hrZone||"")} · ${h(ex.hrPct||"")} HR</span><span style="font-size:12px;color:var(--sub);">RPE ${h(ex.rpe||"")}</span><span style="font-size:11px;color:var(--dim);">${mmss(ex.totalSec||0)}</span></div></div><button onclick="removeFromSession(${ex.id})" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:20px;padding:4px;flex-shrink:0;" aria-label="Remove">×</button></div></div>`;
+    }
+    return `<div class="sess-card" style="border-left-color:${ex.col};"><div class="row"><div style="width:26px;height:26px;border-radius:50%;background:${ex.col}22;border:1.5px solid ${ex.col};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${ex.col};flex-shrink:0;">${i+1}</div><div style="flex:1;"><div style="font-size:15px;font-weight:600;margin-bottom:4px;">${h(ex.ex||"")}</div><div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;"><span class="badge" style="background:${ex.col}22;color:${ex.col};">${h(ex.zone)}</span><span style="font-size:13px;font-weight:500;">${ex.sets}×${ex.reps}</span>${ex.hasRM&&ex.load?`<span style="font-size:13px;font-weight:600;">${ex.load} ${h(ex.unit)}</span>`:""}<span style="font-size:12px;color:var(--sub);">${ex.pct}% 1RM</span><span style="font-size:12px;color:var(--sub);">RPE ${h(ex.rpe)}</span>${ex.vol?`<span style="font-size:11px;color:var(--dim);">Vol: ${ex.vol.toLocaleString()}</span>`:""}</div></div><button onclick="removeFromSession(${ex.id})" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:20px;padding:4px;flex-shrink:0;" aria-label="Remove">×</button></div></div>`;
+  };
+  // Sections: strength block, then conditioning block, each labeled if both exist
+  let listHTML="";
+  if(strengthItems.length && condItems.length){
+    listHTML+=`<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin:4px 0 6px;">Strength</div>`;
+    listHTML+=strengthItems.map((ex)=>card(ex,session.indexOf(ex))).join("");
+    listHTML+=`<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin:12px 0 6px;">Conditioning</div>`;
+    listHTML+=condItems.map((ex)=>card(ex,session.indexOf(ex))).join("");
+  } else {
+    listHTML=session.map((ex,i)=>card(ex,i)).join("");
+  }
+  // Summary — show strength metrics and/or conditioning metrics as relevant
+  let summaryCards="";
+  if(strengthItems.length){
+    summaryCards+=`<div class="g4"><div class="metric"><div class="mval">${strengthItems.length}</div><div class="mlbl">Lifts</div></div><div class="metric"><div class="mval">${ts}</div><div class="mlbl">Sets</div></div><div class="metric"><div class="mval">${tr}</div><div class="mlbl">Reps</div></div><div class="metric"><div class="mval">${Math.round(tv).toLocaleString()}</div><div class="mlbl">Vol (${h(strengthItems[0]?.unit||"kg")})</div></div></div>`;
+  }
+  if(condItems.length){
+    summaryCards+=`<div class="g2" style="margin-top:${strengthItems.length?"8px":"0"};"><div class="metric"><div class="mval">${condItems.length}</div><div class="mlbl">Cond. pieces</div></div><div class="metric"><div class="mval">${mmss(condSec)}</div><div class="mlbl">Cond. time</div></div></div>`;
+  }
+  const summary=session.length?`<div class="card" style="border:1px solid var(--border);"><div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-weight:600;">Session summary</div>${summaryCards}</div>`:"";
   document.getElementById("page-session").innerHTML=`
   <div class="fljb" style="margin-bottom:12px;">
     <div style="font-size:16px;font-weight:600;">Session — ${h(c.name)}</div>
     <div class="row">${session.length?`<button onclick="printSession()" style="padding:8px 12px;font-size:13px;">Export</button><button class="danger" onclick="clearSession()" style="font-size:12px;padding:8px;">Clear</button>`:""}</div>
   </div>
-  ${session.length===0?empty:list+summary}`;
+  ${session.length===0?empty:listHTML+summary}`;
 }
 function printSession(){
   const c=gc();
   const date=new Date().toLocaleDateString("en-GB",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
-  const tv=Math.round(session.reduce((s,e)=>s+(e.vol||0),0));
-  const ts=session.reduce((s,e)=>s+e.sets,0);
-  const tr=session.reduce((s,e)=>s+e.sets*e.reps,0);
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Session — ${c.name}</title><style>*{box-sizing:border-box;}body{font-family:system-ui,sans-serif;padding:24px;color:#111;max-width:800px;margin:0 auto;}h1{font-size:20px;font-weight:700;margin-bottom:4px;}.sub{color:#666;font-size:13px;margin-bottom:18px;}table{width:100%;border-collapse:collapse;margin-bottom:18px;font-size:13px;}th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;}td{padding:10px 6px;border-bottom:1px solid #f0f0f0;}.sum{display:flex;gap:20px;background:#f5f5f5;padding:14px;border-radius:8px;margin-bottom:18px;}.sv{font-size:20px;font-weight:700;}.sl{font-size:11px;color:#666;}.pb{background:#111;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:20px;}@media print{.pb{display:none;}}</style></head><body><button class="pb" onclick="window.print()">Print / Save as PDF</button><h1>Training session — ${c.name}</h1><p class="sub">${date} · ${c.level} · ${c.unit}</p><div class="sum"><div><div class="sv">${session.length}</div><div class="sl">Exercises</div></div><div><div class="sv">${ts}</div><div class="sl">Total sets</div></div><div><div class="sv">${tr}</div><div class="sl">Total reps</div></div><div><div class="sv">${tv.toLocaleString()} ${session[0]?.unit||"kg"}</div><div class="sl">Total volume</div></div></div><table><thead><tr><th>#</th><th>Exercise</th><th>Zone</th><th>Sets×Reps</th><th>Load</th><th>%1RM</th><th>RPE</th><th>Volume</th><th>Notes</th></tr></thead><tbody>${session.map((ex,i)=>`<tr><td>${i+1}</td><td><strong>${ex.ex||""}</strong></td><td>${ex.zone||""}</td><td>${ex.sets}×${ex.reps}</td><td>${ex.hasRM&&ex.load?`${ex.load} ${ex.unit}`:"—"}</td><td>${ex.pct}%</td><td>${ex.rpe||""}</td><td>${ex.vol?Math.round(ex.vol).toLocaleString()+" "+ex.unit:"—"}</td><td></td></tr>`).join("")}</tbody></table><p style="font-size:11px;color:#bbb;">Generated by S&C Coach Toolkit</p></body></html>`;
+  const strengthItems=session.filter(e=>e.type!=="cond");
+  const condItems=session.filter(e=>e.type==="cond");
+  const tv=Math.round(strengthItems.reduce((s,e)=>s+(e.vol||0),0));
+  const ts=strengthItems.reduce((s,e)=>s+(e.sets||0),0);
+  const tr=strengthItems.reduce((s,e)=>s+(e.sets||0)*(e.reps||0),0);
+  const condSec=condItems.reduce((s,e)=>s+(e.totalSec||0),0);
+  const unit=strengthItems[0]?.unit||c.unit;
+  const sumCells=[];
+  if(strengthItems.length){
+    sumCells.push([strengthItems.length,"Lifts"],[ts,"Total sets"],[tr,"Total reps"],[`${tv.toLocaleString()} ${unit}`,"Total volume"]);
+  }
+  if(condItems.length){
+    sumCells.push([condItems.length,"Cond. pieces"],[mmss(condSec),"Cond. time"]);
+  }
+  const sumHTML=sumCells.map(([v,l])=>`<div><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
+  const strengthTable=strengthItems.length?`<h2 style="font-size:14px;margin:0 0 8px;">Strength</h2><table><thead><tr><th>#</th><th>Exercise</th><th>Zone</th><th>Sets×Reps</th><th>Load</th><th>%1RM</th><th>RPE</th><th>Volume</th><th>Notes</th></tr></thead><tbody>${strengthItems.map((ex,i)=>`<tr><td>${i+1}</td><td><strong>${ex.ex||""}</strong></td><td>${ex.zone||""}</td><td>${ex.sets}×${ex.reps}</td><td>${ex.hasRM&&ex.load?`${ex.load} ${ex.unit}`:"—"}</td><td>${ex.pct}%</td><td>${ex.rpe||""}</td><td>${ex.vol?Math.round(ex.vol).toLocaleString()+" "+ex.unit:"—"}</td><td></td></tr>`).join("")}</tbody></table>`:"";
+  const condTable=condItems.length?`<h2 style="font-size:14px;margin:0 0 8px;">Conditioning</h2><table><thead><tr><th>#</th><th>Movement</th><th>Energy system</th><th>Prescription</th><th>Target HR</th><th>RPE</th><th>Time</th><th>Notes</th></tr></thead><tbody>${condItems.map((ex,i)=>`<tr><td>${i+1}</td><td><strong>${ex.move||""}</strong></td><td>${ex.system||""}</td><td>${ex.prescription||""}</td><td>${ex.hrZone||""} (${ex.hrPct||""})</td><td>${ex.rpe||""}</td><td>${mmss(ex.totalSec||0)}</td><td></td></tr>`).join("")}</tbody></table>`:"";
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Session — ${c.name}</title><style>*{box-sizing:border-box;}body{font-family:system-ui,sans-serif;padding:24px;color:#111;max-width:800px;margin:0 auto;}h1{font-size:20px;font-weight:700;margin-bottom:4px;}h2{font-weight:700;color:#333;}.sub{color:#666;font-size:13px;margin-bottom:18px;}table{width:100%;border-collapse:collapse;margin-bottom:22px;font-size:13px;}th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;}td{padding:10px 6px;border-bottom:1px solid #f0f0f0;}.sum{display:flex;flex-wrap:wrap;gap:20px;background:#f5f5f5;padding:14px;border-radius:8px;margin-bottom:22px;}.sv{font-size:20px;font-weight:700;}.sl{font-size:11px;color:#666;}.pb{background:#111;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:20px;}@media print{.pb{display:none;}}</style></head><body><button class="pb" onclick="window.print()">Print / Save as PDF</button><h1>Training session — ${c.name}</h1><p class="sub">${date} · ${c.level} · ${c.unit}</p><div class="sum">${sumHTML}</div>${strengthTable}${condTable}<p style="font-size:11px;color:#bbb;">Generated by S&C Coach Toolkit</p></body></html>`;
   const win=window.open("about:blank","_blank");
   if(win){win.document.write(html);win.document.close();}else alert("Allow pop-ups for the print view.");
+}
+
+// ── CONDITIONING ──────────────────────────────────────────────────────────
+const mmss=sec=>{sec=Math.round(sec);const m=Math.floor(sec/60),s=sec%60;return m>0?`${m}m${s>0?` ${s}s`:""}`:`${s}s`;};
+// Returns { label, detail, totalSec, work, rest }
+function computeCond(){
+  const fmt=condFormat, f=condF;
+  let label="", detail="", totalSec=0;
+  if(fmt==="intervals"){
+    label=`${f.rounds} × (${f.work}s work / ${f.rest}s rest)`;
+    detail=`${f.rounds} rounds`;
+    totalSec=f.rounds*(f.work+f.rest);
+  } else if(fmt==="emom"){
+    label=`EMOM ${f.emomMin} min — ${f.emomWork}s work each min`;
+    detail=`${f.emomMin} rounds, ~${f.emomMin*f.emomWork}s total work`;
+    totalSec=f.emomMin*60;
+  } else if(fmt==="amrap"){
+    label=`AMRAP ${f.cap} min`;
+    detail="Max rounds in the cap";
+    totalSec=f.cap*60;
+  } else if(fmt==="tabata"){
+    label=`Tabata — 20s on / 10s off × 8`;
+    detail="8 rounds, 4 min total";
+    totalSec=8*30;
+  } else if(fmt==="circuit"){
+    label=`${f.rounds} rounds × ${f.stations} stations (${f.stationWork}s each)`;
+    detail=`${f.circuitRest}s rest between rounds`;
+    totalSec=f.rounds*(f.stations*f.stationWork+f.circuitRest);
+  } else if(fmt==="steady"){
+    label=`Steady-state — ${f.duration} min continuous`;
+    detail="Hold target zone throughout";
+    totalSec=f.duration*60;
+  }
+  return {label, detail, totalSec};
+}
+
+function updateCondF(k,v){condF={...condF,[k]:Math.max(0,parseInt(v)||0)};renderCond();}
+
+function renderCond(){
+  const sys=ENERGY_SYSTEMS.find(s=>s.id===condSystem)||ENERGY_SYSTEMS[1];
+  const fmt=COND_FORMATS.find(f=>f.id===condFormat)||COND_FORMATS[0];
+  const comp=computeCond();
+  const f=condF;
+  // Energy-system selector bar (mirrors the load intensity bar)
+  const sysBar=`<div class="z-bar" style="height:26px;">${ENERGY_SYSTEMS.map(s=>`<div class="z-seg" style="flex:1;background:${s.col};opacity:${s.id===condSystem?1:0.3};" title="${h(s.name)}" onclick="condSystem='${s.id}';renderCond()"></div>`).join("")}</div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:5px;"><span>← Alactic</span><span>Anaerobic</span><span>VO₂</span><span>Threshold</span><span>Zone 2 →</span></div>`;
+  // Field inputs depend on format
+  const numF=(k,lbl,unit)=>`<div><label class="fl-label">${h(lbl)}${unit?` (${unit})`:""}</label><input type="number" value="${f[k]}" min="0" inputmode="numeric" oninput="updateCondF('${k}',this.value)"></div>`;
+  let fields="";
+  if(condFormat==="intervals") fields=`<div class="g3">${numF("work","Work","sec")}${numF("rest","Rest","sec")}${numF("rounds","Rounds")}</div>`;
+  else if(condFormat==="emom") fields=`<div class="g2">${numF("emomMin","Duration","min")}${numF("emomWork","Work / min","sec")}</div>`;
+  else if(condFormat==="amrap") fields=`<div class="g2">${numF("cap","Time cap","min")}<div></div></div>`;
+  else if(condFormat==="tabata") fields=`<p style="font-size:12px;color:var(--sub);padding:8px 10px;background:var(--bg);border-radius:8px;">Fixed protocol: 20s max effort / 10s rest × 8 rounds = 4 min.</p>`;
+  else if(condFormat==="circuit") fields=`<div class="g2">${numF("stations","Stations")}${numF("stationWork","Work / station","sec")}${numF("circuitRest","Rest / round","sec")}${numF("rounds","Rounds")}</div>`;
+  else if(condFormat==="steady") fields=`<div class="g2">${numF("duration","Duration","min")}<div></div></div>`;
+  // Movement select
+  const moveOpts=COND_MOVE_CATS.map(cat=>`<optgroup label="${h(cat)}">${COND_MOVES.filter(m=>m.cat===cat).map(m=>`<option value="${m.id}" ${m.id===condMove?"selected":""}>${h(m.name)}</option>`).join("")}</optgroup>`).join("");
+  const customField=condMove==="custom"?`<div style="margin-top:8px;"><label class="fl-label">Custom movement name</label><input type="text" value="${h(condCustomName)}" placeholder="e.g. Stair sprints" oninput="condCustomName=this.value"></div>`:"";
+
+  document.getElementById("page-cond").innerHTML=`
+  <div class="card" style="padding:14px;">
+    <p style="font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:500;">Energy system — tap to select the training target</p>
+    ${sysBar}
+  </div>
+
+  <div class="card" style="border-left:4px solid ${sys.col};">
+    <div class="fljb" style="margin-bottom:6px;"><span style="font-size:15px;font-weight:700;color:${sys.col};">${h(sys.name)}</span><span class="badge" style="background:${sys.col}22;color:${sys.col};">${h(sys.hrZone)} · RPE ${h(sys.rpe)}</span></div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:10px;">${h(sys.desc)}</p>
+    <div class="g3" style="gap:8px;">
+      <div class="metric"><div class="mval" style="font-size:14px;color:${sys.col};">${h(sys.hrPct)}</div><div class="mlbl">% max HR</div></div>
+      <div class="metric"><div class="mval" style="font-size:14px;">${h(sys.work)}</div><div class="mlbl">work bout</div></div>
+      <div class="metric"><div class="mval" style="font-size:14px;">${h(sys.rest)}</div><div class="mlbl">work:rest</div></div>
+    </div>
+    <p style="font-size:11px;color:var(--dim);margin-top:8px;">Good fits: ${h(sys.examples)}</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Build the piece</div>
+    <div class="g2" style="margin-bottom:10px;">
+      <div><label class="fl-label">Format</label><select onchange="condFormat=this.value;renderCond()">${COND_FORMATS.map(fo=>`<option value="${fo.id}" ${fo.id===condFormat?"selected":""}>${h(fo.name)}</option>`).join("")}</select></div>
+      <div><label class="fl-label">Movement</label><select onchange="condMove=this.value;renderCond()">${moveOpts}</select></div>
+    </div>
+    ${customField}
+    <p style="font-size:12px;color:var(--sub);margin:10px 0;padding:8px 10px;background:var(--bg);border-radius:8px;">${h(fmt.desc)}</p>
+    ${fields}
+  </div>
+
+  <div class="card" style="border-left:4px solid ${sys.col};">
+    <div class="g3" style="gap:8px;margin-bottom:12px;">
+      <div class="metric"><div class="mval" style="color:${sys.col};">${mmss(comp.totalSec)}</div><div class="mlbl">total time</div></div>
+      <div class="metric"><div class="mval" style="font-size:14px;">${h(sys.hrZone)}</div><div class="mlbl">target HR</div></div>
+      <div class="metric"><div class="mval" style="font-size:14px;">RPE ${h(sys.rpe)}</div><div class="mlbl">effort</div></div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;font-weight:600;">Prescription</div>
+      <div style="font-size:15px;font-weight:600;">${h(condMoveName())}</div>
+      <div style="font-size:13px;color:var(--text);margin-top:2px;">${h(comp.label)}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:2px;">${h(comp.detail)}</div>
+    </div>
+    <button onclick="addCondToSession()" style="width:100%;padding:13px;font-size:15px;background:${sys.col};">+ Add to session</button>
+  </div>`;
+}
+function condMoveName(){
+  if(condMove==="custom") return condCustomName.trim()||"Custom movement";
+  return COND_MOVES.find(m=>m.id===condMove)?.name||"Movement";
+}
+function addCondToSession(){
+  const sys=ENERGY_SYSTEMS.find(s=>s.id===condSystem)||ENERGY_SYSTEMS[1];
+  const comp=computeCond();
+  session.push({
+    id:Date.now(), type:"cond",
+    move:condMoveName(), system:sys.name, systemShort:sys.short, col:sys.col,
+    prescription:comp.label, detail:comp.detail, totalSec:comp.totalSec,
+    hrZone:sys.hrZone, hrPct:sys.hrPct, rpe:sys.rpe,
+  });
+  updateSessionBadge(); nav("session");
 }
 
 // ── PROGRAM TAB (Standards + Plan) ────────────────────────────────────────
@@ -512,12 +732,13 @@ function renderGuide(){
     {rpe:6,desc:"3–4 reps remaining",col:"#185FA5"},
     {rpe:5,desc:"Comfortable, recovery pace",col:"#185FA5"},
   ].map(({rpe,desc,col})=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);"><div style="width:32px;height:32px;border-radius:50%;background:${col}22;border:1.5px solid ${col};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${col};flex-shrink:0;">${rpe}</div><span style="font-size:13px;color:var(--sub);">${h(desc)}</span></div>`).join("");
+  const hrRows=HR_ZONES.map(z=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);"><div style="width:38px;height:32px;border-radius:6px;background:${z.col}22;border:1.5px solid ${z.col};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${z.col};flex-shrink:0;">${z.z}</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">${h(z.name)} <span style="color:var(--dim);font-weight:400;">· ${h(z.pct)} HRmax</span></div><div style="font-size:12px;color:var(--sub);">${h(z.desc)} · RPE ${h(z.rpe)}</div></div></div>`).join("");
   const install=`<div class="install-tip"><strong>📱 Add to your home screen</strong><b>iPhone/iPad:</b> Open in Safari → tap Share → "Add to Home Screen"<br><b>Android:</b> Open in Chrome → tap ⋮ menu → "Add to Home Screen"<br><br>It will work like a native app — no app store needed.</div>`;
-  document.getElementById("page-guide").innerHTML=`${install}<div class="card"><div class="card-title">Training intensity zones</div>${zoneCards}</div><div class="card"><div class="card-title">RPE — rate of perceived exertion</div>${rpeRows}</div>`;
+  document.getElementById("page-guide").innerHTML=`${install}<div class="card"><div class="card-title">Strength intensity zones</div>${zoneCards}</div><div class="card"><div class="card-title">Heart-rate zones (conditioning)</div><p style="font-size:12px;color:var(--sub);margin-bottom:8px;">% of max heart rate. Rough HRmax estimate: 208 − (0.7 × age).</p>${hrRows}</div><div class="card"><div class="card-title">RPE — rate of perceived exertion</div>${rpeRows}</div>`;
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────
-const PAGE_TITLES={clients:"Clients",calc:"Load calculator",session:"Session",program:"Program",guide:"Guide"};
+const PAGE_TITLES={clients:"Clients",calc:"Load calculator",cond:"Conditioning",session:"Session",program:"Program",guide:"Guide"};
 function nav(id){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("active"));
@@ -527,6 +748,7 @@ function nav(id){
   currentPage=id;
   if(id==="clients")renderClients();
   else if(id==="calc")renderCalc();
+  else if(id==="cond")renderCond();
   else if(id==="session")renderSession();
   else if(id==="program")renderProgram();
   else if(id==="guide")renderGuide();
